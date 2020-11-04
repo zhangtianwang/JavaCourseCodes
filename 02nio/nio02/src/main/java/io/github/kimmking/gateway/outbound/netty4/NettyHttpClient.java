@@ -1,3 +1,50 @@
+package io.github.kimmking.gateway.outbound.netty4;
+
+import io.github.kimmking.gateway.listener.NettyHttpListener;
+import io.github.kimmking.gateway.outbound.netty4.NettyHttpClientOutboundHandler;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.*;
+import io.netty.channel.local.LocalAddress;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.http.HttpRequestDecoder;
+import io.netty.handler.codec.http.HttpResponseEncoder;
+
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.net.URI;
+
+
+public class NettyHttpClient {
+
+
+    public void connect(SocketAddress address, ChannelHandlerContext context, Object msg) {
+        try {
+            EventLoopGroup group = new NioEventLoopGroup();
+            Bootstrap bootstrap = new Bootstrap();
+
+            bootstrap.group(group).channel(NioSocketChannel.class)
+                    .remoteAddress(address)
+                    .handler(new ChannelInitializer<SocketChannel>() {
+                        @Override
+                        protected void initChannel(SocketChannel socketChannel) {
+                            socketChannel.pipeline().addLast(new HttpRequestDecoder());
+                            socketChannel.pipeline().addLast(new NettyHttpClientOutboundHandler());
+                            socketChannel.pipeline().addLast(new HttpResponseEncoder());
+                        }
+                    });
+
+            ChannelFuture future = bootstrap.connect().sync();
+            future.channel().closeFuture().sync().addListener(new NettyHttpListener(context, msg));
+        } catch (Exception ex) {
+
+        }
+    }
+
+}
+
 //package io.github.kimmking.gateway.outbound;
 //
 //import io.netty.bootstrap.Bootstrap;
